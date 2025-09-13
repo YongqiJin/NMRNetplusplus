@@ -1,4 +1,4 @@
-from .key_dataset import KeyDataset, IndexDataset, ToTorchDataset, NumericalTransformDataset, FlattenDataset
+from .key_dataset import KeyDataset, IndexDataset, ToTorchDataset, NumericalTransformDataset, FlattenDataset, ConstantDataset
 from .conformer_dataset import ConformerSampleDataset, TTADataset, TTAIndexDataset
 from .normalize_dataset import NormalizeDataset, TargetScalerDataset
 from .remove_hydrogen_dataset import RemoveHydrogenDataset
@@ -10,5 +10,6 @@ from .lattice_dataset import LatticeNormalizeDataset, LatticeMatrixNormalizeData
 from .lmdb_dataset import LMDBDataset, FoldLMDBDataset, StackedLMDBDataset, SplitLMDBDataset
 from .select_token_dataset import SelectTokenDataset, FilterDataset
 from .resample_dataset import EpochResampleDataset, EpochLogResampleDataset
+from .merge_dataset import MergedDataset
 
 __all__ = []

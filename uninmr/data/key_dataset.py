@@ -31,6 +31,18 @@ class IndexDataset(BaseWrapperDataset):
     def __getitem__(self, idx):
         return idx
 
+class ConstantDataset(BaseWrapperDataset):
+    def __init__(self, dataset, value):
+        self.dataset = dataset
+        self.value = value
+
+    def __len__(self):
+        return len(self.dataset)
+
+    @lru_cache(maxsize=16)
+    def __getitem__(self, idx):
+        return self.value
+
 class ToTorchDataset(BaseWrapperDataset):
     def __init__(self, dataset, dtype='float32'):
         super().__init__(dataset)
