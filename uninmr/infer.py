@@ -86,6 +86,8 @@ def main(args):
             os.makedirs(args.results_path)
         fname = (args.path).split("/")[-2]
         save_path = os.path.join(args.results_path, fname + "_" + subset + ".out.pkl")
+        if args.subset_name:
+            save_path = os.path.join(args.results_path, fname + "_" + args.subset_name + ".out.pkl")
         # Initialize data iterator
         itr = task.get_batch_iterator(
             dataset=dataset,
@@ -120,6 +122,7 @@ def main(args):
 
 def cli_main():
     parser = options.get_validation_parser()
+    parser.add_argument('--subset_name', type=str, default=None)
     options.add_model_args(parser)
     args = options.parse_args_and_arch(parser)
 
