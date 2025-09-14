@@ -31,7 +31,7 @@ def get_result(filename):
         target.extend(item['target'].reshape(-1).tolist())
         # print(item.keys())
         bsz = len(item['matid'])
-        num_by_sample.extend(item['select_atom'].reshape(-1, bsz).sum(0).tolist())
+        num_by_sample.extend(item['select_atom'].reshape(bsz, -1).sum(1).tolist())
         src_token = item["src_token"][item["select_atom"]==1]
         src_token = src_token.detach().cpu().numpy().tolist()
         src_tokens.extend(src_token)
