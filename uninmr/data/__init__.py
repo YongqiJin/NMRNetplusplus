@@ -1,4 +1,4 @@
-from .key_dataset import KeyDataset, IndexDataset, ToTorchDataset, NumericalTransformDataset, FlattenDataset, ConstantDataset
+from .key_dataset import KeyDataset, SolventDataset, IndexDataset, ToTorchDataset, NumericalTransformDataset, FlattenDataset, ConstantDataset
 from .conformer_dataset import ConformerSampleDataset, TTADataset, TTAIndexDataset
 from .normalize_dataset import NormalizeDataset, TargetScalerDataset
 from .remove_hydrogen_dataset import RemoveHydrogenDataset
