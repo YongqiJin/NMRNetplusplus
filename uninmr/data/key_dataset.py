@@ -19,6 +19,26 @@ class KeyDataset(BaseWrapperDataset):
     @lru_cache(maxsize=16)
     def __getitem__(self, idx):
         return self.dataset[idx][self.key]
+    
+class SolventDataset(BaseWrapperDataset):
+    def __init__(self, dataset, key, solvent_map={'CDCl3':1, 'DMSO-d6':2}):
+        self.dataset = dataset
+        self.key = key
+        self.solvent_map = solvent_map or {}  # 溶剂字符串到整数的映射字典
+
+    def __len__(self):
+        return len(self.dataset)
+
+    @lru_cache(maxsize=16)
+    def __getitem__(self, idx):
+        try:
+            solvent_str = self.dataset[idx][self.key]
+            # 将溶剂字符串映射到整数
+            id = self.solvent_map.get(solvent_str, 3)
+        except KeyError:
+            # 如果数据集中没有溶剂 key，返回默认值
+            id = 0
+        return torch.tensor(id)
 
 class IndexDataset(BaseWrapperDataset):
     def __init__(self, dataset):
