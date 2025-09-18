@@ -82,5 +82,5 @@ for fold in $(seq 0 $(($maxfolds - 1)))
     done 2>&1 | tee "${save_dir}/finetune.log"
 
 
-sh infer_all.sh ${save_dir} ${selected_atom}
+sh infer_all_with_solv.sh ${save_dir} ${selected_atom}
 #find ${save_dir}/cv_seed_${cv_seed}_fold_${fold} -type f -name "*.pt" -exec rm -f {} \;
