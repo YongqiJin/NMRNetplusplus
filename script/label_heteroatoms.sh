@@ -1,10 +1,10 @@
 export WANDB_MODE=offline
 
-dataset='nmrshiftdb2_2018'
-data_path="./data/nmrshiftdb2_2018/All" # replace to your data path
+element=$1  # replace to your labeled atom
 
-unlabeled_data_path="./data/nmrshiftdb2_2018/All"
-# unlabeled_data_path="/mnt/fs_mol/yongqi/clean-code/forward/unlabeled_data/v0508_H_max_chiral_1_max_atoms_100_warn_True_ele_C_H_O_N_S_P_F_Cl_filtered" # replace to your unlabeled data path
+data_path="./data/NMRexp/${element}" # replace to your data path
+unlabeled_data_path="./data/NMRexp/${element}" # replace to your unlabeled data path
+
 unlabeled_weight=1
 bs1=8
 bs2=0
@@ -24,7 +24,7 @@ dropout=0.0
 warmup=0.03
 update_freq=1
 
-selected_atom='H'   # replace to your labeled atom
+selected_atom=${element}   # replace to your labeled atom
 loss='atom_regloss_mae'
 arch='unimol_large'
 
@@ -41,7 +41,7 @@ global_bs2=`expr $bs2 \* $n_gpu \* $update_freq`
 timestamp=$(date +"%Y%m%d_%H%M%S")
 exp_name="scratch_${selected_atom}_${weight_name}_${arch}_${loss}_lr_${lr}_bs1_${global_bs1}_bs2_${global_bs2}_wu_${warmup}_ep_${epoch}_wgt_${unlabeled_weight}_T_${T}_ratio_${ratio1}_${ratio2}_${timestamp}"
 
-save_dir="./output/unlabel/${dataset}/5cv/${exp_name}"
+save_dir="./output/${selected_atom}/${exp_name}"
 if [ -d "${save_dir}" ]; then
     rm -rf ${save_dir}
     echo "Folder remove at: ${save_dir}"
@@ -78,6 +78,6 @@ for fold in $(seq 0 $(($maxfolds - 1)))
     done 2>&1 | tee ${save_dir}/finetune.log
 
 
-sh infer_all.sh ${save_dir} ${selected_atom}
+sh script/infer_single.sh ${save_dir} ${selected_atom}
 
 #find ${save_dir}/cv_seed_${cv_seed}_fold_${fold} -type f -name "*.pt" -exec rm -f {} \;

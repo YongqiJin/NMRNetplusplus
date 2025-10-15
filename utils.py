@@ -280,6 +280,27 @@ def mol2coords(mol, seed=42, mode='fast', filter_warning=True):
     return coordinates
 
 
+def load_lmdb(path):
+    env = lmdb.open(
+        path,
+        subdir=False,
+        readonly=True,
+        lock=False,
+        readahead=False,
+        meminit=False,
+    )
+
+    txn_read = env.begin(write=False)
+
+    data = {}
+    with txn_read.cursor() as cursor:
+        for key, value in cursor:
+            data[key] = pickle.loads(value)
+
+    env.close()
+    return data
+
+
 def write_lmdb(data: Union[Dict, List], path: str):
     """
     Writes data to an LMDB database.

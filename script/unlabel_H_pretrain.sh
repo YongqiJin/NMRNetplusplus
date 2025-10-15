@@ -4,7 +4,7 @@ dataset='nmrshiftdb2_2018'
 data_path="./data/nmrshiftdb2_2018/All" # replace to your data path
 
 unlabeled_data_path="./data/NMRexp_v0905/H" # replace to your unlabeled data path
-unlabeled_weight=1
+unlabeled_weight=16
 bs1=4
 bs2=16
 ratio1=$bs1
@@ -17,7 +17,7 @@ num_classes=1
 weight_path='./weight/H_pretraining_molecular_unimol_large_atom_regloss_mae_lr_0.0001_bs_8_0.03_50'  # replace to your pre-training ckpt path
 weight_name='checkpoint_best'  # replace to your pre-training ckpt name
 dict_name='dict'
-lr=0.0001 
+lr=0.0004 
 epoch=10   # replace 40, 45, 50, 60, 200 
 dropout=0.0
 warmup=0.03
@@ -77,6 +77,6 @@ for fold in $(seq 0 $(($maxfolds - 1)))
     done 2>&1 | tee "${save_dir}/finetune.log"
 
 
-sh infer_all.sh ${save_dir} ${selected_atom}
+sh script/infer_all.sh ${save_dir} ${selected_atom}
 
 #find ${save_dir}/cv_seed_${cv_seed}_fold_${fold} -type f -name "*.pt" -exec rm -f {} \;

@@ -1,5 +1,3 @@
-# /mnt/fs_mol/yongqi/ckps/NMRexp/NMRexp_10to24_1_0811.parquet
-
 import pandas as pd
 from rdkit import Chem
 import argparse
@@ -31,7 +29,7 @@ def count_chiral_centers(mol):
 def smi2mol(smi, add_hs=True):
     try:
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")  # 捕获所有警告
+            warnings.simplefilter("always")
             mol = Chem.MolFromSmiles(smi)
             if add_hs and mol is not None:
                 mol = Chem.AddHs(mol)
@@ -188,7 +186,7 @@ def filter_data(input_path, nmr_type, max_chiral_centers, max_atoms, allowed_ato
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Filter NMR data from a .parquet file.")
-    parser.add_argument("--input", '-i', default="./v0508.parquet", help="Path to the input .parquet file.")
+    parser.add_argument("--input", '-i', default="./raw_data/NMRexp_10to24_1_0811.parquet", help="Path to the input .parquet file.")
     parser.add_argument("--nmr_type", '-t', default='H', choices=["H", "C"], help="NMR type to filter (1H NMR or 13C NMR).")
     parser.add_argument("--max_chiral_centers", '-c', type=int, default=1, help="Maximum number of chiral centers allowed.")
     parser.add_argument("--max_atoms", '-m', type=int, default=70, help="Maximum number of atoms allowed.")
@@ -211,4 +209,4 @@ if __name__ == "__main__":
     
     filter_data(args.input, args.nmr_type, args.max_chiral_centers, args.max_atoms, allowed_atoms, args.filter_warning, args.h_gap)
 
-# python filter_nmr_data.py -i /mnt/fs_mol/yongqi/ckps/NMRexp/NMRexp_10to24_1_0811.parquet -t H && python filter_nmr_data.py -i /mnt/fs_mol/yongqi/ckps/NMRexp/NMRexp_10to24_1_0811.parquet -t C
+# python filter_nmr_data.py -t H && python filter_nmr_data.py -t C

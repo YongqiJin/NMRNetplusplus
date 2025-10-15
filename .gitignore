@@ -172,7 +172,7 @@ wandb/
 
 # script
 script_old/
-script/
+script/*/*
 
 # output
 output_old/
@@ -180,3 +180,9 @@ output/
 
 # weights
 weight/
+weight_old/
+
+raw_data/
+logs/
+
+results/
