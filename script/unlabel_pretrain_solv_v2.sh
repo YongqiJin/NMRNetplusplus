@@ -6,7 +6,7 @@ export WANDB_MODE=offline
 dataset='nmrshiftdb2_2018'
 data_path=""  # replace with your labeled data path
 unlabeled_data_path=""  # replace to your unlabeled data path
-unlabeled_weight=1
+unlabeled_weight=16
 bs1=4
 bs2=16
 ratio1=$bs1
@@ -19,8 +19,8 @@ num_classes=1
 weight_path='' # replace with your pretrained weight path
 weight_name='checkpoint_best'
 dict_name='dict'
-lr=0.0001
-epoch=20
+lr=0.0004
+epoch=10
 dropout=0.0
 warmup=0.03
 update_freq=1
@@ -55,7 +55,7 @@ mkdir -p "${save_dir}"
 echo "Folder created at: ${save_dir}"
 
 nfolds=5
-maxfolds=1
+maxfolds=5
 for fold in $(seq 0 $((maxfolds - 1))); do
     export NCCL_ASYNC_ERROR_HANDLING=1
     export OMP_NUM_THREADS=1
@@ -83,4 +83,5 @@ for fold in $(seq 0 $((maxfolds - 1))); do
 done 2>&1 | tee "${save_dir}/finetune.log"
 
 # Add your inference script invocation if needed
-sh ./script/infer_all_with_solv.sh ${save_dir} ${selected_atom}
+sh ./script/infer_all_with_solv.sh ${save_dir} ${selected_atom} "${arch}" "${SOLVENT_FLAGS}"
+
