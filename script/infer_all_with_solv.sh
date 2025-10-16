@@ -1,8 +1,8 @@
 data_path="./data/nmrshiftdb2_2018/All" # replace to your data path
 
-save_dir="./output/unlabel/nmrshiftdb2_2018/5cv/pretrain_H_checkpoint_best_unimol_large_solv_atom_regloss_mae_lr_0.0001_bs1_4_bs2_16_wu_0.03_ep_20_wgt_1_T__ratio_4_16"  # replace to your finetune ckpt path
+save_dir="$1"  # replace to your finetune ckpt path
 #save_dir="./output/unlabel/nmrshiftdb2_2018/5cv/pretrain_H_checkpoint_best_unimol_large_solv_atom_regloss_mae_lr_0.0001_bs1_4_bs2_16_wu_0.03_ep_20_wgt_1_T__ratio_4_16_20250908_055158"  # replace to your finetune ckpt path
-element='H'   # replace to your labeled atom
+element="$2"   # replace to your labeled atom
 unlabeled_data_path="./data/NMRexp_v0905/${element}" # replace to your unlabeled data path
 
 
