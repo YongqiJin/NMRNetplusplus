@@ -83,5 +83,5 @@ for fold in $(seq 0 $((maxfolds - 1))); do
 done 2>&1 | tee "${save_dir}/finetune.log"
 
 # Add your inference script invocation if needed
-sh ./script/infer_all_with_solv.sh ${save_dir} ${selected_atom} "${arch}" "${SOLVENT_FLAGS}"
+sh ./script/infer_all_with_solv.sh "${save_dir}" "${selected_atom}" "${arch}" "${SOLVENT_FLAGS}"
 
