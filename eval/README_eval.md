@@ -40,7 +40,7 @@ python eval/build_dual_solvent_subsets.py \
 ### 3. Run Inference
 Run inference on the generated subsets (`label_a`, `label_b`, `label_base`). The script supports a `mixed` mode to use different configurations for different subsets.
 
-**Note:** Edit `run_infer_multisplit.sh` to set your `SUBSET_PARENT_DIR`, `SAVE_DIR` (Config A), and `SAVE_DIR_SECOND` (Config B) paths before running. `SUBSET_PARENT_DIR` should point to the directory containing the subsets (e.g., `results/paired_intersection_C/DvN`).
+**Note:** Edit `run_infer_multisplit.sh` to set your `SUBSET_PARENT_DIR`, `SAVE_DIR` (Config A, which is expected to contain /cv_seed_42_fold_1 with checkpoint, and scalar.ss), and `SAVE_DIR_SECOND` (Config B) paths before running. `SUBSET_PARENT_DIR` should point to the directory containing the subsets (e.g., `results/paired_intersection_C/DvN`).
 
 ```bash
 # Usage: MODE=[MODE] bash eval/run_infer_multisplit.sh
@@ -67,8 +67,7 @@ Run inference twice on the split datasets: once with the solvent model (Config A
 
 1.  **Edit `run_infer_multisplit.sh`**:
     -   Set `SUBSET_PARENT_DIR="results/solvent_split_C"`
-    -   Set `SAVE_DIR="results/solvent_effect_C/with_solvent"` (Config A)
-    -   Set `SAVE_DIR_SECOND="results/solvent_effect_C/no_solvent"` (Config B)
+    -   Set `SAVE_DIR & SAVE_DIR_SECOND` (Config A & B)
 
 2.  **Run Pass 1 (With Solvent)**:
     ```bash
