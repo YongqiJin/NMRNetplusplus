@@ -29,12 +29,12 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
     def add_args(parser):
         # Copy original arguments
         parser.add_argument("--solvent-embed-dim", type=int, metavar="H", help="solvent embedding dimension")
-        parser.add_argument("--solvent-embed-before-backbone", type=bool, metavar="B", help="use solvent embedding before backbone")
-        parser.add_argument("--solvent-embed-after-backbone", type=bool, metavar="B", help="use solvent embedding after backbone")
+        parser.add_argument("--solvent-embed-before-backbone", action="store_true", help="use solvent embedding before backbone")
+        parser.add_argument("--solvent-embed-after-backbone", action="store_true", help="use solvent embedding after backbone")
         parser.add_argument("--solvent-max-types", type=int, metavar="F", help="maximum number of solvent types")
         # New flags
         parser.add_argument("--bos-only", action="store_true", help="only add solvent embedding to BOS token when before-backbone mode")
-        parser.add_argument("--solv-concat", action="store_true", help="after-backbone: concat + linear (else additive)")
+        parser.add_argument("--embed-after-head", action="store_true", help="after-backbone: add scalar to head output (else additive to backbone output)")
         # Original model hyper-parameters
         parser.add_argument("--encoder-layers", type=int, metavar="L", help="num encoder layers")
         parser.add_argument("--encoder-embed-dim", type=int, metavar="H", help="encoder embedding dim")
@@ -48,7 +48,7 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
         parser.add_argument("--activation-dropout", type=float, metavar="D", help="activation dropout")
         parser.add_argument("--pooler-dropout", type=float, metavar="D", help="pooler dropout")
         parser.add_argument("--max-seq-len", type=int, help="max sequence length")
-        parser.add_argument("--post-ln", type=bool, help="use post layernorm")
+        parser.add_argument("--post-ln", action="store_true", help="use post layernorm")
         parser.add_argument("--masked-token-loss", type=float, metavar="D", help="mask token loss ratio")
         parser.add_argument("--masked-dist-loss", type=float, metavar="D", help="masked distance loss ratio")
         parser.add_argument("--masked-coord-loss", type=float, metavar="D", help="masked coord loss ratio")
@@ -71,20 +71,17 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
             self.solvent_embed_full = nn.Embedding(args.solvent_max_types, args.encoder_embed_dim)
 
         # After-backbone embeddings:
-        if args.solvent_embed_after_backbone and args.solv_concat:
-            self.solvent_embed = nn.Embedding(args.solvent_max_types, args.solvent_embed_dim)
-            self.solvent_denser = nn.Linear(args.solvent_embed_dim + args.encoder_embed_dim, args.encoder_embed_dim)
-            nn.init.eye_(self.solvent_denser.weight[:, :args.encoder_embed_dim])
-            nn.init.zeros_(self.solvent_denser.bias)
-            if self.solvent_embed.weight.size(1) > args.encoder_embed_dim:
-                nn.init.zeros_(self.solvent_embed.weight[:, args.encoder_embed_dim:])
-        else:
-            self.solvent_embed = None
-            self.solvent_denser = None
-        # full-dim embedding for additive after-backbone mode
+        # If embed_after_head is True, we use a scalar embedding added to the logits.
+        # If embed_after_head is False, we use additive injection to the backbone output (Scenario D).
         if args.solvent_embed_after_backbone:
-            self.solvent_embed_after_add = nn.Embedding(args.solvent_max_types, args.encoder_embed_dim)
+            if args.embed_after_head:
+                self.solvent_embed_scalar = nn.Embedding(args.solvent_max_types, 1)
+                self.solvent_embed_after_add = None
+            else:
+                self.solvent_embed_scalar = None
+                self.solvent_embed_after_add = nn.Embedding(args.solvent_max_types, args.encoder_embed_dim)
         else:
+            self.solvent_embed_scalar = None
             self.solvent_embed_after_add = None
 
         self._num_updates = None
@@ -215,15 +212,11 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
 
         # AFTER BACKBONE INJECTION
         #  规则：
-        #   - concat 模式: 使用 solvent_embed_dim 维 embedding (self.solvent_embed) 拼接 + linear 回投影
-        #   - additive 模式: 使用 encoder_embed_dim 维 embedding (self.solvent_embed_after_add) 逐 token 相加
+        #   - embed_after_head=True: 不修改 model_input，在 logits 处加 scalar
+        #   - embed_after_head=False: 使用 encoder_embed_dim 维 embedding (self.solvent_embed_after_add) 逐 token 相加
         if self.args.solvent_embed_after_backbone and solvent is not None:
-            if self.args.solv_concat and self.solvent_embed is not None and self.args.solvent_embed_dim > 0:
-                solvent_embeds2 = self.solvent_embed(solvent.long())  # (B, d_concat)
-                solvent_exp = solvent_embeds2.unsqueeze(1).expand(-1, model_input.size(1), -1)
-                model_input = self.solvent_denser(torch.cat((model_input, solvent_exp), dim=2))
-            elif not self.args.solv_concat and self.solvent_embed_after_add is not None:
-                # additive after-backbone: 使用 full-dim embedding (= encoder_embed_dim), 忽略 solvent_embed_dim
+            if not self.args.embed_after_head and self.solvent_embed_after_add is not None:
+                # additive after-backbone: 使用 full-dim embedding (= encoder_embed_dim)
                 solvent_embeds2 = self.solvent_embed_after_add(solvent.long())  # (B, D)
                 solvent_exp = solvent_embeds2.unsqueeze(1).expand(-1, model_input.size(1), -1)
                 model_input = model_input + solvent_exp
@@ -239,6 +232,36 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
                 logits[name] = head(model_input[select_atom == 1])
             for name, head in self.classification_heads.items():
                 logits[name] = head(model_input)
+
+        # Apply scalar solvent embedding if embed_after_head is True
+        if self.args.solvent_embed_after_backbone and self.args.embed_after_head and solvent is not None:
+            solvent_scalar = self.solvent_embed_scalar(solvent.long()) # (B, 1)
+            
+            def apply_solvent_scalar(output, is_node_level):
+                if is_node_level:
+                    # output: (Total_Atoms, num_classes)
+                    # solvent_scalar: (B, 1)
+                    # select_atom: (B, S)
+                    # Expand solvent to (B, S, 1)
+                    sol_exp = solvent_scalar.unsqueeze(1).expand(-1, select_atom.size(1), -1)
+                    # Flatten to (Total_Atoms, 1)
+                    sol_flat = sol_exp[select_atom == 1]
+                    return output + sol_flat
+                else:
+                    # output: (B, num_classes)
+                    return output + solvent_scalar
+
+            if isinstance(logits, torch.Tensor):
+                if classification_head_name in self.node_classification_heads:
+                    logits = apply_solvent_scalar(logits, True)
+                elif classification_head_name in self.classification_heads:
+                    logits = apply_solvent_scalar(logits, False)
+            elif isinstance(logits, dict):
+                for name in logits:
+                    if name in self.node_classification_heads:
+                        logits[name] = apply_solvent_scalar(logits[name], True)
+                    elif name in self.classification_heads:
+                        logits[name] = apply_solvent_scalar(logits[name], False)
 
         return logits, encoder_distance, encoder_coord, lattice, x_norm, delta_encoder_pair_rep_norm
 
@@ -449,7 +472,14 @@ class NumericalEmbed(nn.Module):
         nn.init.constant_(self.mul.weight, 1)
         nn.init.kaiming_normal_(self.w_edge.weight)
     def forward(self, x, edge_type):
-        x = x[:, :, :, 0].squeeze(-1)
+        # Support both shapes: (B, N, N, 1) and (B, N, N)
+        if x.dim() == 4:
+            x = x[:, :, :, 0]
+        elif x.dim() == 3:
+            # already (B, N, N)
+            pass
+        else:
+            raise RuntimeError(f"NumericalEmbed expects x dim 3/4, got {x.shape}")
         mul = self.mul(edge_type).type_as(x)
         bias = self.bias(edge_type).type_as(x)
         w_edge = self.w_edge(edge_type).type_as(x)
@@ -487,5 +517,5 @@ def base_architecture_v2(args):
     args.solvent_embed_after_backbone = getattr(args, "solvent_embed_after_backbone", False)
     args.solvent_embed_before_backbone = getattr(args, "solvent_embed_before_backbone", False)
     args.bos_only = getattr(args, "bos_only", False)
-    args.solv_concat = getattr(args, "solv_concat", False)
+    args.embed_after_head = getattr(args, "embed_after_head", False)
     args.post_ln = getattr(args, "post_ln", False)
