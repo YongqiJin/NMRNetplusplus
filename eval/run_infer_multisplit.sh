@@ -22,13 +22,13 @@ if [ ! -f "$INFER_PY" ]; then
   exit 2
 fi
 
-# First configuration (default)
+# First configuration (with solvent injection)
 SAVE_DIR="./results/triclass_infer_C"
 ELEMENT="C"
 ARCH="unimol_large_solv_v2"
 SOLVENT_FLAGS="--solvent-embed-before-backbone --bos-only  --solvent-max-types 4"
 
-# Second configuration (override via env)
+# Second configuration (baseline)
 SAVE_DIR_SECOND="${SAVE_DIR_SECOND:-./results/triclass_blank_C}"
 SOLVENT_FLAGS_SECOND="${SOLVENT_FLAGS_SECOND:---solvent-max-types 0}"
 
