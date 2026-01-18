@@ -173,5 +173,8 @@ wandb/
 # output files
 output/
 
+# weight
+weight/
+
 # zenodo
 zenodo/

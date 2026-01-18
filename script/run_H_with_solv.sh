@@ -25,7 +25,6 @@ MASTER_PORT=33371
 num_classes=1
 weight_path='./weight'  # replace to your pre-training ckpt path
 weight_name='pretraining_molecular'  # replace to your pre-training ckpt name
-dict_name='dict'
 lr=0.0004
 epoch=10
 dropout=0.0
@@ -75,7 +74,7 @@ for fold in $(seq 0 $(($maxfolds - 1)))
         --update-freq $update_freq --seed 1 \
         --fp16 --fp16-init-scale 4 --fp16-scale-window 256 \
         --num-classes $num_classes --pooler-dropout $dropout \
-        --finetune-from-model "${weight_path}/${weight_name}.pt" --dict-name "${dict_name}.txt" \
+        --finetune-from-model "${weight_path}/${weight_name}.pt" --dict-name "../../../weight/dict.txt" \
         --log-interval 1000 --log-format simple \
         --validate-interval 1 --keep-last-epochs 1 --save-interval 1 \
         --save-dir $fold_save_dir \

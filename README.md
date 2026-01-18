@@ -1,18 +1,20 @@
 From Human Labels to Literature: Semi-Supervised Learning of NMR Chemical Shifts at Scale
 ==================================================
 
-A semi-supervised framework for large-scale NMR chemical shift prediction.
+A semi-supervised framework for large-scale chemical shift learning on unlabeled literature-derived data.
 
 ![framework](./figure/framework.jpg)
 
-## Environment & Dependencies
+## Environment
 ```bash
 pip install -r requirements.txt
 ```
 
-## Datasets & Weights
-- Place pretrained weights in [`./weight`](./weight).
-- Place datasets in [`./data`](./data); download from [Zenodo]().
+## Datasets & Models
+All pretrained weights, datasets, and trained checkpoints are available on [**Zenodo**](https://zenodo.org/).
+- Download the pretrained weights and place them in `./weight/`.
+- Download the datasets and place them in `./data/`.
+
 
 ## Running
 - **H/C**  
@@ -21,7 +23,7 @@ pip install -r requirements.txt
   ```
 - **H/C with solvent**  
   ```bash
-  sh script/run_H_solvent.sh
+  sh script/run_H_with_solv.sh
   ```
 - **Heteroatoms (F / P / B / Si)**  
   ```bash

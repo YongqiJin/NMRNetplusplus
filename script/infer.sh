@@ -17,15 +17,15 @@ for fold in $(seq 0 $(($nfolds - 1)))
         --results-path ${save_dir}/cv_seed_${cv_seed}_fold_${fold}  --saved-dir $save_dir \
         --num-workers 8 --ddp-backend=c10d --batch-size 64 \
         --task uninmr --loss 'atom_regloss_mae' --arch 'unimol_large' \
-        --dict-name "dict.txt" \
+        --dict-name "../../../weight/dict.txt" \
         --path ${save_dir}/cv_seed_${cv_seed}_fold_${fold}/checkpoint_last.pt \
         --fp16 --fp16-init-scale 4 --fp16-scale-window 256 \
         --log-interval 50 --log-format simple --required-batch-size-multiple 1 \
         --selected-atom ${element}   --gaussian-kernel   --atom-descriptor 0 --split-mode infer 
     done 2>&1 | tee ${save_dir}/infer.log
 
-python ./uninmr/utils/get_result.py --path ${save_dir} --file_end "*valid.out.pkl" --mode cv --dict "./data/nmrshiftdb2/All/dict.txt" 2>&1 | tee ${save_dir}/result.log
-python ./uninmr/utils/get_result_unlabel.py --path ${save_dir} --file_end "*valid.out.pkl" --mode cv --dict "./data/nmrshiftdb2/All/dict.txt" 2>&1 | tee ${save_dir}/result_unlabel_1.log
+python ./uninmr/utils/get_result.py --path ${save_dir} --file_end "*valid.out.pkl" --mode cv --dict "./weight/dict.txt" 2>&1 | tee ${save_dir}/result.log
+python ./uninmr/utils/get_result_unlabel.py --path ${save_dir} --file_end "*valid.out.pkl" --mode cv --dict "./weight/dict.txt" 2>&1 | tee ${save_dir}/result_unlabel_1.log
 
 
 nfolds=5
@@ -37,12 +37,12 @@ for fold in $(seq 0 $(($nfolds - 1)))
         --results-path ${save_dir}/cv_seed_${cv_seed}_fold_${fold}  --saved-dir $save_dir \
         --num-workers 8 --ddp-backend=c10d --batch-size 64 \
         --task uninmr --loss 'atom_regloss_mae' --arch 'unimol_large' \
-        --dict-name "dict.txt" \
+        --dict-name "../../../weight/dict.txt" \
         --path ${save_dir}/cv_seed_${cv_seed}_fold_${fold}/checkpoint_last.pt \
         --fp16 --fp16-init-scale 4 --fp16-scale-window 256 \
         --log-interval 50 --log-format simple --required-batch-size-multiple 1 \
         --selected-atom ${element}   --gaussian-kernel   --atom-descriptor 0 --split-mode infer 
     done 2>&1 | tee ${save_dir}/infer_unlabel.log
 
-python ./uninmr/utils/get_result_unlabel.py --path ${save_dir} --file_end "*valid_unlabel.out.pkl" --mode cv --dict "./data/nmrshiftdb2/All/dict.txt" 2>&1 | tee ${save_dir}/result_unlabel_2.log
+python ./uninmr/utils/get_result_unlabel.py --path ${save_dir} --file_end "*valid_unlabel.out.pkl" --mode cv --dict "./weight/dict.txt" 2>&1 | tee ${save_dir}/result_unlabel_2.log
 
