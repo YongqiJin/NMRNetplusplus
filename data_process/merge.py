@@ -1,5 +1,3 @@
-import lmdb
-
 from utils import write_lmdb, load_lmdb
 
 def merge_lmdb(input_paths, output_path):

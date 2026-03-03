@@ -1,10 +1,8 @@
 import pandas as pd
 from rdkit import Chem
 import argparse
-import sys
 from multiprocessing import Pool
 from functools import partial
-import swifter
 from tqdm import tqdm
 import warnings
 
@@ -210,3 +208,4 @@ if __name__ == "__main__":
     filter_data(args.input, args.nmr_type, args.max_chiral_centers, args.max_atoms, allowed_atoms, args.filter_warning, args.h_gap)
 
 # python filter_nmr_data.py -t H && python filter_nmr_data.py -t C
+# python data_process/filter_nmr_data.py -t H -a None && python data_process/filter_nmr_data.py -t C -a None

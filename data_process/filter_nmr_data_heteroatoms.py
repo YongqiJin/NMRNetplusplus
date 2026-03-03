@@ -1,10 +1,8 @@
 import pandas as pd
 from rdkit import Chem
 import argparse
-import sys
 from multiprocessing import Pool
 from functools import partial
-import swifter
 from tqdm import tqdm
 import warnings
 
