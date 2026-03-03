@@ -90,8 +90,6 @@ def filter_data(input_path, nmr_type, max_chiral_centers, max_atoms, allowed_ato
         "C": "13C NMR"
     }
     df = df[df['nmr_type'] == nmr_mapping[nmr_type]]
-    # top 10000
-    # df = df.head(10000)
     logger.info(f'-- num after nmr type filter: {len(df)}')
 
     # Filter by smiles
@@ -144,17 +142,14 @@ def filter_data(input_path, nmr_type, max_chiral_centers, max_atoms, allowed_ato
     
     # Filter by shifts count
     df['atoms_equi_class'] = parallel_apply(df['mol'], get_equi_class)
-    df['atoms_target_mask'] = df.swifter.apply(
-        lambda row: create_atoms_target_mask(row['atoms'], row['atoms_equi_class'], nmr_type),
-        axis=1
-    )
+    df['atoms_target_mask'] = [
+        create_atoms_target_mask(a, e, nmr_type)
+        for a, e in zip(df['atoms'], df['atoms_equi_class'])
+    ]
     df['count_mask'] = df['atoms_target_mask'].apply(lambda x: np.sum(x))
     df['count_shifts'] = df["extracted_shifts"].apply(lambda x: len(x))
     df = df[df['count_mask'] == df['count_shifts']]
-    df['atoms_target'] = df.swifter.apply(
-        lambda row: fill_atoms_target(row['atoms_target_mask'], row["extracted_shifts"]),
-        axis=1
-    )
+    df['atoms_target'] = [fill_atoms_target(m, s) for m, s in zip(df['atoms_target_mask'], df['extracted_shifts'])]
     logger.info(f'-- num after shifts count filter: {len(df)}')
     
     # Get coordinates
@@ -207,4 +202,4 @@ if __name__ == "__main__":
     
     filter_data(args.input, args.nmr_type, args.max_chiral_centers, args.max_atoms, allowed_atoms, args.filter_warning, args.h_gap)
 
-# python filter_nmr_data.py -t H && python filter_nmr_data.py -t C
+# python data_process/filter_nmr_data.py -t H && python data_process/filter_nmr_data.py -t C
