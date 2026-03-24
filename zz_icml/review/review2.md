@@ -16,15 +16,15 @@ The authors propose a weakly supervised framework to learn an NMR chemical shift
 
 ### Strengths
 
-- Predicting NMR spectra is a relevant problem in multiple applications of analytical chemistry, including organic chemistry research, the pharmaceutical industry (assessment of impurities at production), identifying environmental pollutants, and so on.
-- The suggested method utilizes a vast amount of untapped literature data.
-- It addresses the problem of solvent effects.
+1. Predicting NMR spectra is a relevant problem in multiple applications of analytical chemistry, including organic chemistry research, the pharmaceutical industry (assessment of impurities at production), identifying environmental pollutants, and so on.
+2. The suggested method utilizes a vast amount of untapped literature data.
+3. It addresses the problem of solvent effects.
 
 ### Weaknesses
 
-- No error bars are provided in any of the result tables; it is very hard to tell if the differences are significant or not.
-- Many elements of Table 2 are left unfilled, but the reviewer fails to see the reason why they cannot be computed. Any prediction method can be applied to the structures in the ShiftDB-Lit database, and the \(L_{\mathrm{mol}}\) loss can be computed on the prediction. (The reviewer may be missing something—in that case the authors should clarify—but they see no reason why the missing values cannot be computed in Table 2.)
-- The idea of using a set-based supervision loss is not particularly novel.
+1. No error bars are provided in any of the result tables; it is very hard to tell if the differences are significant or not.
+2. Many elements of Table 2 are left unfilled, but the reviewer fails to see the reason why they cannot be computed. Any prediction method can be applied to the structures in the ShiftDB-Lit database, and the \(L_{\mathrm{mol}}\) loss can be computed on the prediction. (The reviewer may be missing something—in that case the authors should clarify—but they see no reason why the missing values cannot be computed in Table 2.)
+3. The idea of using a set-based supervision loss is not particularly novel.
 
 **Note from reviewer:** Addressing the evaluation problem (adding error bars, providing all losses in Table 2 that can be computed) would automatically result in +1 in their overall score.
 
