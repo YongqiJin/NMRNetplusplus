@@ -1,0 +1,340 @@
+\section{Introduction}
+
+Nuclear magnetic resonance (NMR) spectroscopy is a cornerstone technique for molecular structure elucidation, providing detailed information on the chemical environments of individual atoms~\cite{clayden2012organic, skoog2019textbook}. Among the various NMR observables, chemical shifts are particularly important for assigning spectral peaks and interpreting complex molecular structures~\cite{smith2010assigning, chen2020review, hu2023machine, jin2025nmr}. As a result, accurately predicting chemical shifts is a fundamental task in molecular science and related fields~\cite{wishart199412, tsai2022ml}. In computational terms, this task can be formulated as: given a molecular structure, predict the chemical shift of each NMR-active nucleus, typically for hydrogen (\( ^1 \)H) and carbon (\( ^{13} \)C) nuclei.
+
+
+While traditional methods such as density functional theory (DFT)~\cite{wolinski1990giao} and HOSE codes~\cite{bremser1978hose} provide valuable predictions, they struggle to balance accuracy with computational efficiency. 
+In recent years, machine learning (ML)-based approaches have emerged as powerful alternatives, offering substantial speedups over DFT calculations while achieving high prediction accuracy~\cite{han2022SGNN, zou2023DetaNet, chen2024gt, xu2025toward}. 
+However, these methods predominantly rely on manually curated datasets with explicit atom-level assignments, such as NMRShiftDB2~\cite{kuhn2012chemical, kuhn2015NMRShiftDB2}, which are limited in size and are labor-intensive to generate. 
+Moreover, these datasets fail to capture the effects of solvents on chemical shifts, a critical aspect of real-world NMR spectra~\cite{buckingham1960solvent}.
+
+While the scarcity of human-labeled datasets remains a significant challenge, scientific literature offers vast quantities of NMR spectra, often accompanied by experimental details including solvent information. 
+Recent advancements in document parsing technologies~\cite{wang2024mineru} and Optical Chemical Structure Recognition (OCSR)~\cite{fang2024molparser} have made it increasingly feasible to extract large-scale NMR data from literature~\cite{wang2025nmrextractor, wang2025nmrexp}. 
+However, these NMR data often lack atom-level assignments, which makes them difficult to incorporate into traditional supervised learning frameworks. 
+This emerging resource presents an exciting opportunity to apply weakly supervised learning techniques, enabling models to leverage the wealth of unassigned chemical shift data.
+
+To address these challenges, we introduce a weakly supervised learning that leverages unlabeled literature data during training. Additionally, we integrate solvent information as input to capture solvent effects in chemical shift prediction. This framework overcomes the limitations of previous supervised machine learning models, which were constrained by the scalability of labeled experimental data, and achieves superior performance in both prediction accuracy and generalizability.
+
+
+\textbf{Our contributions} can be summarized as follows:
+\begin{itemize}
+\item We formulate NMR chemical shift prediction from unassigned literature spectra as a permutation-invariant set supervision problem, and propose a semi-supervised learning framework that jointly leverages atom-assigned data and large-scale unassigned spectra.
+\item We show that under mild conditions on the loss function, the optimal bipartite matching between predicted and observed chemical shift sets reduces to a sorting-based loss, enabling stable and scalable training with millions of weakly supervised samples.
+\item We curate a large-scale (millions of spectra) literature-extracted NMR chemical shift dataset, ShiftDB-Lit, containing molecular structures, chemical shift sets and solvents, covering $^1$H, $^{13}$C, and multiple heteroatoms.
+\item Using this dataset, we incorporate experimental solvent information into large-scale chemical shift learning, and demonstrate that global solvent conditioning captures systematic solvent-induced biases in NMR prediction. 
+We further provide labeled benchmarks and baselines for heteroatom shifts ($^{19}$F, $^{31}$P, $^{11}$B, $^{29}$Si).
+\end{itemize}
+
+Overall, this work demonstrates that unassigned literature NMR spectra can be transformed into an effective learning signal through permutation-invariant supervision. 
+By leveraging large-scale weakly supervised data together with limited atom-assigned labels, our approach enables more accurate, solvent-aware, and multi-element chemical shift prediction. 
+More broadly, this study highlights the potential of literature-derived datasets—despite their lack of explicit standardization—as a powerful and largely untapped resource for scientific machine learning.
+
+\input{table1}
+
+
+\section{Related Work}
+
+\textbf{Chemical Shift Prediction.} 
+Traditional methods primarily rely on empirical induction or quantum mechanical calculations to predict chemical shifts based on atomic environments. 
+Density Functional Theory (DFT)~\cite{wolinski1990giao} provides a more accurate quantum mechanical approach, but it is computationally intensive and not feasible for large datasets or high-throughput applications.  
+The HOSE code methods~\cite{bremser1978hose} use predefined rules based on local atomic environments to estimate chemical shifts. While fast, these methods can lack accuracy for complex molecules.  
+With the rise of machine learning, supervised models based on molecular graphs, including GNNs and equivariant MPNNs, have achieved substantially improved accuracy over rule-based methods~\cite{jonas2019rapid, kwon2020FCG, han2022SGNN, zou2023DetaNet}.
+More recently, GT-NMR~\cite{chen2024gt} and NMRNet~\cite{xu2025toward} adopted graph Transformers~\cite{vaswani2017attention} to represent the relationships between atoms in molecules. The latter uses an SE(3)-equivariant Transformer, taking molecular spatial coordinates as input, further enhancing the prediction accuracy of ML methods.
+Despite architectural advances, all existing ML-based chemical shift predictors fundamentally rely on atom-level assignments during training, implicitly assuming a one-to-one correspondence between atoms and spectral peaks. 
+This assumption breaks down for the vast majority of literature-reported NMR spectra, motivating alternative supervision paradigms.
+
+\textbf{NMR Datasets.}  
+The largest experimental chemical shift dataset is NMRShiftDB2~\cite{kuhn2015NMRShiftDB2}, which has collected about 40,000 \(^1\)H and \(^{13}\)C NMR spectra.  
+QM9-NMR~\cite{gupta2021qm9nmr} contains over 130,000 molecules with their calculated chemical shifts using DFT methods.  
+With advancements in literature parsing tools, some methods are now attempting to extract large-scale NMR data from scientific literature.  
+NMRBank~\cite{wang2025nmrextractor} utilizes a fine-tuned large language model to identify and extract relevant data, while NMRexp~\cite{wang2025nmrexp} employs a pipeline combining PDF parsing, Optical Chemical Structure Recognition~(OCSR), and LLM-based extraction methods, obtaining a million-scale dataset of unassigned molecular NMR data.
+While literature-extracted datasets are orders of magnitude larger, their lack of atom-level correspondence renders them incompatible with standard supervised objectives used in existing models.
+
+\textbf{Semi-Supervised and Weakly Supervised Learning.}
+
+Limited labeled data, high acquisition costs, and annotation difficulty are common challenges across many domains. 
+Semi-supervised and weakly supervised learning aim to leverage unlabeled or weakly labeled data to improve model performance~\cite{van2020survey, zhou2018brief}. 
+% achieving notable success in fields such as natural language processing~\cite{wu2019semi}, computer vision~\cite{carion2020end, ouali2020semi}, and multimodal learning~\cite{maheshwari2024missing}.  
+In scientific domains, the scarcity of high-quality, standardized data has motivated the use of weakly annotated or unlabeled datasets to train models effectively. Such methods have been explored in tasks including Quantitative Structure-Activity Relationship (QSAR) modeling~\cite{chen2021chemical, kwon2022harnessing}, synthesis procedure classification~\cite{huo2019semi}, and drug fingerprint identification~\cite{shi2023weakly}.
+
+
+\textbf{Incorporating Solvent Information for Prediction.}  
+Traditional approaches include explicit and implicit solvent models. Explicit models~\cite{mark2001structure} represent each solvent molecule and use molecular dynamics (MD) simulations to capture solute–solvent interactions accurately, but at high computational cost. Implicit models, such as PCM~\cite{mennucci2012polarizable} and COSMO~\cite{klamt2011cosmo}, treat the solvent as a continuous medium, reducing computational demands while still requiring substantial resources. In machine learning, solvent information is typically encoded as descriptors~\cite{li2025transpeaknet}. 
+However, in NMR chemical shift prediction, incorporating solvent information remains largely unexplored due to the scarcity of standardized datasets with solvent labels.
+
+
+\section{Methods} \label{sec:method}
+
+
+\subsection{Data Source and Preprocessing}
+
+We constructed our chemical shift dataset from NMRexp~\cite{wang2025nmrexp}, a large-scale collection of NMR spectra extracted from peer-reviewed chemistry publications. The dataset comprises millions of molecular-spectral entries, each linking a molecular structure with its reported NMR spectra. The original textual NMR data were parsed using regular expressions and transformed into sets of chemical shifts, represented as multisets to capture all observed peaks.
+
+To ensure data quality, we applied a systematic three-stage filtering procedure: \textbf{molecular validity checks}, \textbf{NMR data validity checks}, and \textbf{consistency checks}. 
+Molecular validity checks removed chemically incorrect structures, including free radicals, isotopes, invalid SMILES, or uncommon elemental compositions. 
+NMR data validity checks enforced monotonicity, verified chemical shift ranges to account for potential reporting errors in the literature, and filtered out peaks with excessively broad widths indicative of low-resolution or noisy measurements.
+Consistency checks ensured alignment between the number of atoms and reported chemical shifts, accounting for ambiguities in carbon spectra where peak integration is unavailable. 
+Finally, we generated 3D molecular conformations using \texttt{RDKit}~\cite{landrum2016rdkit} to provide structural information for molecular modeling.
+
+Moreover, the large volume of literature-extracted data enables large-scale training of experimental heteroatom chemical shifts.  
+Since heteroatoms are typically present in small numbers within molecules, we retained only molecules containing a single equivalent heteroatom, where the corresponding NMR chemical shift set contains a single shift. These data pairs can therefore be treated as labeled data.  
+
+Detailed data processing procedures are provided in Appendix~\ref{app:data}, and a comparison between our dataset and previous ones is presented in Table~\ref{tab:dataset}.
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{figures/framework.pdf}
+    \vspace{-1em}
+    \caption{Framework of semi-supervised learning for chemical shift prediction models.}
+    \label{fig:framework}
+\end{figure*}
+
+\subsection{Semi-supervised Training Framework} \label{subsec:loss}
+
+We jointly train the model using both atom-assigned (labeled) and unassigned (unlabeled) NMR spectra, as illustrated in Figure~\ref{fig:framework}. 
+The overall objective consists of a supervised atom-level loss for labeled data and a weakly-supervised molecule-level loss for unassigned data.
+
+\paragraph{Supervised atom-level loss.}
+For a molecule with atom-level assignments, let $\{s_i\}_{i=1}^{N}$ denote the predicted chemical shifts and $\{\hat{s}_i\}_{i=1}^{N}$ the corresponding ground-truth labels.
+The supervised loss is computed directly at the atom level:
+\begin{equation}
+\mathcal{L}_{\text{atom}} = \sum_{i=1}^{N} l(s_i, \hat{s}_i),
+\label{eq:loss-atom}
+\end{equation}
+where $l(\cdot,\cdot)$ denotes a pointwise regression loss such as MAE or MSE.
+
+\paragraph{Weakly-supervised molecule-level loss.}
+For unassigned spectra, the reported chemical shifts form an unordered set and do not correspond directly to specific atoms.
+We therefore formulate learning from unassigned data as a \emph{permutation-invariant set supervision} problem.
+
+Specifically, we define the \textbf{weakly-supervised (molecule-level) loss} as a \textbf{bipartite matching loss}, computed as the supervised loss under the optimal assignment between predicted and observed shifts:
+\begin{align}
+\mathcal{L}_{\text{mol}} 
+    &= \min_{\sigma \in \mathfrak{S}_N} \sum_{i=1}^{N} l(s_i, \hat{s}_{\sigma_i}),
+    \label{eq:loss-mol-1}
+\end{align}
+where $\mathfrak{S}_N$ denotes the set of all permutations of $N$ elements.
+In general, this corresponds to solving a bipartite matching problem, which can be computed using the Hungarian algorithm~\cite{kuhn1955hungarian,Munkres1957hungarian}.
+
+\paragraph{Permutation-invariant loss equivalence.}
+When the loss function satisfies
+\begin{equation}
+l(x,y) = f(|x-y|),
+\end{equation}
+where $f$ is a monotonically increasing and convex function, the optimal assignment admits a closed-form solution.
+In particular, the minimum in~\eqref{eq:loss-mol-1} is obtained by sorting the predicted and observed shifts and matching them in order:
+\begin{align}
+\mathcal{L}_{\text{mol}}
+    &= \sum_{i=1}^{N} l(s_{r_i}, \hat{s}_{t_i}),
+    \label{eq:loss-mol-2}
+\end{align}
+where $\{r_i\}$ and $\{t_i\}$ denote the indices that sort $\{s_i\}$ and $\{\hat{s}_i\}$ in ascending order, respectively.
+
+This result transforms a combinatorial matching problem into a deterministic, permutation-invariant loss, enabling stable and efficient training on large-scale unassigned spectra.
+The above condition holds for commonly used regression losses, including MAE, MSE, and Huber loss.
+A formal proof is provided in Appendix~\ref{apd:proof}.
+
+\paragraph{Overall objective.}
+The final training objective combines the supervised and weakly-supervised losses:
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{atom}} + \lambda \, \mathcal{L}_{\text{mol}},
+\label{eq:loss-total}
+\end{equation}
+where $\lambda$ controls the relative contribution of weak supervision.
+
+In the training process, we use batch sizes $B_1$ for supervised and $B_2 > B_1$ for weakly-supervised losses to reduce the variance of the latter.
+The total loss for a single batch is computed as:
+\begin{equation}
+\mathcal{L}_{\text{batch}} = \frac{1}{N_1} \sum_{b=1}^{B_1} \mathcal{L}_{\text{atom}}^b + \lambda \cdot \frac{1}{N_2} \sum_{b=1}^{B_2} \mathcal{L}_{\text{mol}}^b,
+\end{equation}
+where \( N_1 \) and \( N_2 \) represent the total number of atoms whose chemical shifts are to be predicted in the labeled dataset batch and the unlabeled dataset batch, respectively.
+
+
+\subsection{Model Architecture}
+
+We adopt NMRNet~\cite{xu2025toward} as our baseline, a state-of-the-art deep learning architecture for NMR chemical shift prediction. NMRNet employs an SE(3)-equivariant Transformer to model the spatial relationships among atoms in a molecule, followed by a regression head that outputs each atom's chemical shift. We maintain the original model configuration and training framework to ensure fair comparisons and consistent evaluation across experiments. For additional details, see Appendix~\ref{app:train} and~\ref{app:setting}.
+
+
+\input{table2}
+
+
+\subsection{Embedding Solvent Information}
+\label{subsec:solv_embed}
+Experimental NMR chemical shifts are inherently solvent-dependent. To account for solvent effects, we incorporate learnable solvent embeddings into the model.
+Due to the highly imbalanced distribution, solvents are grouped into three categories: (1) \ce{CDCl3} (89.1\%), (2) \ce{DMSO-d6} (5.7\%), and (3) other infrequent solvents.
+This grouping is driven by data scarcity: the first two categories cover the most common solvents, while the chemically diverse “others” use a single embedding as a practical approximation.
+
+The solvent information is encoded as a learnable embedding $\mathbf{e}_{\text{solv}} \in \mathbb{R}^{d_{\text{model}}}$, which is incorporated into the model via four distinct integration strategies, as illustrated in Figure~\ref{fig:solvent}:
+
+\textbf{(1) \texttt{[CLS]}-token injection.}
+$\mathbf{e}_{\text{solv}}$ is added to the \texttt{[CLS]} token embedding to provide global solvent context.
+
+\textbf{(2) Atom-token pre-backbone injection.}
+$\mathbf{e}_{\text{solv}}$ is added to each atom embedding before the backbone.
+
+\textbf{(3) Atom-token post-backbone injection.}
+$\mathbf{e}_{\text{solv}}$ is added to each atom embedding after the backbone.
+
+\textbf{(4) Simple correction.}
+A learned scalar $b_{\text{solv}} \in \mathbb{R}$ is added uniformly to all predicted atomic shifts.
+
+
+\section{Experiments}
+
+\subsection{Implementation Details}
+
+The ShiftDB-Lit dataset was partitioned into training and test sets with a 4:1 ratio, using a random split.
+For NMRShiftDB2, we follow its pre-defined benchmark split~\cite{kuhn2015NMRShiftDB2} to ensure fair comparison with prior work. 
+The models were trained using the same configuration and hyperparameters as those in the original NMRNet implementation, with detailed information provided in Table~\ref{tab:para}. Each method was evaluated based on Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) as performance metrics. All experiments were conducted on an NVIDIA RTX 4090 GPU.
+
+
+\subsection{Overall Performance Comparison}
+
+In this section, we compare the performance of a range of chemical-shift
+prediction methods, including traditional approaches (HOSE~\cite{bremser1978hose}),
+machine-learning models (GCN~\cite{jonas2019rapid},
+FCG~\cite{kwon2020FCG}, SGNN~\cite{han2022SGNN}, GT-NMR~\cite{chen2024gt}),
+and the current state-of-the-art model, NMRNet~\cite{xu2025toward}, evaluated
+under both supervised and semi-supervised learning paradigms.
+
+We evaluated all methods using MAE and RMSE under both atom-level and molecule-level objectives across the NMRShiftDB2 and ShiftDB-Lit datasets
+(atomic-level metrics are unavailable for ShiftDB-Lit due to the absence of atom-wise assignments).
+As shown in Table~\ref{tab:methods}, semi-supervised training with both labeled and unlabeled data significantly improves prediction accuracy over prior supervised models, reducing MAE by 13.4\% and 19.6\% for \( ^1 \)H and \( ^{13} \)C on the expert-annotated NMRShiftDB2 benchmark, effectively leveraging unlabeled data to overcome annotation scarcity. 
+
+Notably, on the much larger ShiftDB-Lit dataset, the model achieves substantial improvements, with MAE reductions of 59.9\% and 59.8\% for \( ^1 \)H and \( ^{13} \)C, respectively. 
+The NMRNet Baseline is trained only on NMRShiftDB2, making ShiftDB-Lit an out-of-distribution (OOD) test for the baseline, whereas the semi-supervised model leverages unlabeled ShiftDB-Lit data, making it an in-distribution (ID) test.
+These results reflect both the benefits of semi-supervised learning and the broader chemical coverage from including ShiftDB-Lit, enhancing robustness and generalization, while purely supervised models remain limited by the coverage of labeled datasets and perform worse when extrapolating to molecules outside the training distribution.
+
+
+\subsection{Incorporation of Solvent Information}
+\paragraph{Solvent-injection Strategies.}
+
+We evaluate the four solvent-injection strategies introduced in Section~\ref{subsec:solv_embed} against the solvent-free baseline. 
+As shown in Figure~\ref{fig:solvent}, incorporating solvent information consistently improves prediction accuracy across both nuclei, with the \texttt{[CLS]}-token approach performing best, while simple correction yields only limited gains. 
+These results suggest that solvent effects act as a global contextual bias rather than atom-local perturbations, 
+making \texttt{[CLS]}-token conditioning better suited to capture solvent-dependent variations.
+
+Comparing the two types of nuclei, the improvement for \( ^1\)H is more pronounced than for \( ^{13}\)C. 
+This aligns with chemical intuition, as \( ^1\)H chemical shifts are more sensitive to solvent-dependent interactions such as hydrogen bonding and local polarity, whereas \( ^{13}\)C shifts are dominated by more localized electronic environments.
+
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[c]{1\linewidth} % 左图占1/3
+        \centering
+        \includegraphics[width=0.9\linewidth]{figures/solvent_2.pdf}
+        \vspace{-0.5em}
+        \caption{}
+    \end{subfigure}%
+
+    \begin{subfigure}[c]{\linewidth} % 右图占2/3
+        \centering
+        \includegraphics[width=\linewidth]{figures/solvent_result.pdf}
+        \caption{}
+    \end{subfigure}
+    
+    \caption{\textbf{(a)} Strategies to incorporate solvent information into the model: 
+    (1) \texttt{[CLS]}-token injection; 
+    (2) atom-token pre-backbone injection; 
+    (3) atom-token post-backbone injection; 
+    (4) simple correction (applied after prediction). 
+    \textbf{(b)} Comparison of these strategies on ShiftDB-Lit in terms of mean absolute error (MAE). 
+    The baseline corresponds to the model without solvent information.}
+
+    \label{fig:solvent}
+\end{figure}
+
+
+\paragraph{Per-solvent Performance.}
+
+We further assess the impact of solvent conditioning across different solvent domains (\(\ce{CDCl3}\), \(\ce{DMSO-d6}\), and others).
+For each solvent group, Table~\ref{tab:solvent-all} reports the MAE and RMSE achieved by solvent-conditioned models in comparison to a solvent-agnostic baseline.
+In addition, per-atom prediction deviations are visualized using scatter plots in Appendix~\ref{app:scatter}.
+
+The results indicate that solvent conditioning is particularly important for accurately predicting chemical shifts in less prevalent solvents, such as \ce{DMSO-d6}.
+By explicitly incorporating solvent information, the model mitigates biases introduced by solvent-agnostic training and substantially improves performance on underrepresented solvent domains, especially under highly imbalanced solvent distributions.
+
+We perform cross-solvent validation on molecules in the test set that appear under multiple solvent conditions. For each molecule, predictions are generated using the solvent-conditioned model with the correct solvent token, with incorrect solvent tokens, and without any solvent information. Using the correct solvent token consistently results in the lowest prediction error, while both mismatched solvent inputs and solvent-free predictions lead to higher errors. These results indicate that the model learns solvent-specific adjustments rather than a global chemical shift bias. Detailed results are reported in Appendix~\ref{app:val}.
+
+
+\input{table3}
+
+
+\subsection{Heteroatom Chemical Shift Prediction}
+
+ShiftDB-Lit provides a rare experimentally labeled dataset for heteroatoms ($^{19}$F, $^{31}$P, $^{11}$B, $^{29}$Si), addressing long-standing data scarcity and enabling standardized benchmarking.
+Leveraging this dataset, we perform large-scale supervised training and achieve strong predictive accuracy across all heteroatoms (Table~\ref{tab:hete}).
+These results establish a solid baseline for heteroatom chemical shift prediction and support future methodological advances.
+
+
+\begin{table}[H]
+\centering
+\caption{Evaluation metrics for heteroatom chemical shift prediction on ShiftDB-Lit.}
+\label{tab:hete}
+
+\begin{tabular}{lccc}
+\toprule
+\textbf{Heteroatom} & \textbf{MAE (ppm)} & \textbf{RMSE (ppm)} & \textbf{R²} \\
+\midrule
+$^{19}$F & 2.2809 & 8.7596 & 0.7216 \\
+$^{31}$P & 1.3099 & 4.6877 & 0.9634 \\
+$^{11}$B & 0.8287 & 2.8560 & 0.9406 \\
+$^{29}$Si & 1.9186 & 5.2337 & 0.8901 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\input{table4}
+
+\subsection{Ablation Study}
+
+\paragraph{Supervised and Weakly-supervised Datasets.}
+
+Table~\ref{tab:ablation-dataset} summarizes the effects of different combinations of supervised (NMRShiftDB2 with $L_{\text{atom}}$) and weakly-supervised (ShiftDB-Lit or NMRShiftDB2 with $L_{\text{mol}}$) training. Three key observations emerge.
+
+First, augmenting supervised training with an additional weakly-supervised loss does not improve performance over purely supervised learning on both $L_{\text{atom}}$ and $L_{\text{mol}}$ metric (Exp.~1 vs 4). Moreover, training with weak supervision alone leads to a clear degradation in accuracy (Exp.~3), indicating that, when trained on the same fully labeled dataset, augmenting atom-level supervision with additional molecular-level weak supervision does not provide complementary information beyond standard supervised learning.
+
+Second, combining supervised training on the high-quality NMRShiftDB2 labels with weakly-supervised learning on the literature-scale ShiftDB-Lit dataset yields consistent improvements for both \(^{1}\)H and \(^{13}\)C predictions (Exp.~5). These gains persist on the NMRShiftDB2 benchmark despite the substantial distribution shift between the two datasets, suggesting that performance is primarily limited by data scarcity rather than model capacity. In this regime, weak molecular-level supervision signals distilled from millions of literature spectra act as an effective regularizer.
+
+Third, training exclusively on the weakly-supervised ShiftDB-Lit dataset leads to model collapse (Exp.~2), revealing an inherent failure mode of permutation-based weak supervision. Without atom-level anchoring, early prediction errors are amplified through incorrect bipartite matching, resulting in erroneous atom–peak associations. This effect manifests as substantially worse $L_{\text{atom}}$ metrics compared to $L_{\text{mol}}$, and also hampers training convergence. For example, in \(^{13}\)C prediction, models trained solely on ShiftDB-Lit underperform the combined NMRShiftDB2 and ShiftDB-Lit setting even when evaluated under $L_{\text{mol}}$.
+
+Overall, these results indicate that weak supervision alone is inadequate, but becomes highly effective when anchored by a moderate amount of high-quality labeled data. The combination of NMRShiftDB2 and ShiftDB-Lit therefore provides the most effective configuration for training robust and accurate NMR chemical shift predictors.
+
+
+\paragraph{Weight $\lambda$.}
+
+The hyperparameter \( \lambda \) controls the trade-off between atom-level supervised learning and molecular-level weak supervision in the training objective. In practice, its effective range reflects a balance between leveraging additional weakly-supervised signals and maintaining training stability under noisy or weakly-identifiable supervision.
+
+Figure~\ref{fig:weight} illustrates the model performance under different values of \( \lambda \). On the NMRShiftDB2 benchmark evaluated with \( L_{\text{atom}} \), we observe a clear U-shaped trend for both $^1$H and $^{13}$C NMR, indicating that both underweighting and overweighting the weakly-supervised component can be detrimental. When \( \lambda \) is too small, the model fails to effectively exploit the complementary information provided by weak supervision. Conversely, overly large values of \( \lambda \) cause the training objective to be dominated by molecular-level constraints, biasing the optimization toward degenerate solutions that disregard atom-level correctness.
+
+This effect is particularly evident for \( ^1\mathrm{H} \) predictions under the ShiftDB-Lit (\( L_{\text{mol}} \)) metric, which generally decreases as \( \lambda \) increases. In the absence of sufficient atom-level anchoring, excessive emphasis on weak supervision encourages solutions that optimize molecular-level matching while sacrificing correct atom–peak correspondences. As a result, the molecular-level objective can be increasingly satisfied during training, whereas atom-level accuracy deteriorates, indicating model collapse.
+
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.87\linewidth}
+        \includegraphics[width=\linewidth]{figures/mae_vs_wgt_H.pdf}
+        \vspace{-2em}
+        \caption{\( ^{1} \)H NMR}
+    \end{subfigure}
+    \begin{subfigure}{0.87\linewidth}
+        \includegraphics[width=\linewidth]{figures/mae_vs_wgt_C.pdf}
+        \vspace{-2em}
+        \caption{\( ^{13} \)C NMR}
+    \end{subfigure}
+    \caption{Model performance under different values of the weakly-supervised weight \( \lambda \) (MAE metric).}
+    \label{fig:weight}
+\end{figure}
+
+
+\section{Conclusion}
+
+In this work, we address the long-standing data bottleneck in NMR chemical shift prediction by framing learning from literature-derived spectra as a semi-supervised, permutation-invariant problem over unordered supervision signals. By combining a small set of atom-assigned labels with millions of unassigned spectra, we demonstrate that meaningful supervision can be effectively extracted from unordered experimental observations. This approach offers a scalable solution to chemical shift modeling beyond the constraints of fully labeled datasets.
+
+Our approach leverages a deterministic sorting-based loss for unassigned shifts, enabling stable and scalable training while avoiding the combinatorial complexity of assignment-based objectives. Empirical results demonstrate substantial improvements in prediction accuracy and generalization across diverse molecular structures, solvents, and nuclei. In particular, solvent effects can be captured at scale through simple global conditioning, highlighting the ability of our model to incorporate context-dependent chemical information.
+
+More broadly, this study demonstrates a paradigm shift in scientific machine learning—moving beyond the reliance on small, curated labeled datasets to leverage large-scale, literature-extracted data. Harnessing such vast, unlabeled resources presents a promising path to overcoming the data bottleneck, significantly enhancing model performance in fields where high-quality annotations are scarce. 
+We hope this work will inspire the development of principled methods for learning from weakly structured scientific data, as well as systematic pipelines for extracting and organizing scientific data from the vast literature.
