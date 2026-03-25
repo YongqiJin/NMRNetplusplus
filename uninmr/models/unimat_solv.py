@@ -1,5 +1,5 @@
 ##################################################################################################
-# Minimal-diff v2 version of unimat_solv with four solvent modes controlled by two new flags:
+# Minimal-diff version of unimat_solv with four solvent modes controlled by two new flags:
 #  - --bos-only (only effective when --solvent-embed-before-backbone True)
 #  - --solv-concat (only effective when --solvent-embed-after-backbone True)
 # Behavior:
@@ -23,8 +23,8 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
-@register_model("unimat_solv_v2")
-class UniMatModelwithSolventV2(BaseUnicoreModel):
+@register_model("unimat_solv")
+class UniMatModelwithSolvent(BaseUnicoreModel):
     @staticmethod
     def add_args(parser):
         # Copy original arguments
@@ -62,7 +62,7 @@ class UniMatModelwithSolventV2(BaseUnicoreModel):
 
     def __init__(self, args, dictionary):
         super().__init__()
-        base_architecture_v2(args)
+        base_architecture(args)
         self.args = args
         self.padding_idx = dictionary.pad()
         self.embed_tokens = nn.Embedding(len(dictionary), args.encoder_embed_dim, self.padding_idx)
@@ -491,8 +491,8 @@ class NumericalEmbed(nn.Module):
         h = h.type_as(self.mul.weight)
         return h
 
-@register_model_architecture("unimat_solv_v2", "unimol_large_solv_v2")
-def base_architecture_v2(args):
+@register_model_architecture("unimat_solv", "unimol_large_solv")
+def base_architecture(args):
     args.encoder_layers = getattr(args, "encoder_layers", 15)
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 512)
     args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 2048)
