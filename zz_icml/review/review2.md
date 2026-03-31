@@ -23,7 +23,7 @@ The authors propose a weakly supervised framework to learn an NMR chemical shift
 ### Weaknesses
 
 1. No error bars are provided in any of the result tables; it is very hard to tell if the differences are significant or not.
-2. Many elements of Table 2 are left unfilled, but the reviewer fails to see the reason why they cannot be computed. Any prediction method can be applied to the structures in the ShiftDB-Lit database, and the \(L_{\mathrm{mol}}\) loss can be computed on the prediction. (The reviewer may be missing something—in that case the authors should clarify—but they see no reason why the missing values cannot be computed in Table 2.)
+2. Many element of Table 2 left unfilled but I fail to see the reason why they cannot be computed. Any prediction method can be applied to the structures in the ShiftDB-Lit database, and the \(L_{\mathrm{mol}}\) loss can be computed on the prediction. I may missing something (in that case please help me here), but I see no reason why the missing values cannot be computed in Table 2.
 3. The idea of using a set-based supervision loss is not particularly novel.
 
 **Note from reviewer:** Addressing the evaluation problem (adding error bars, providing all losses in Table 2 that can be computed) would automatically result in +1 in their overall score.
@@ -44,7 +44,7 @@ The authors propose a weakly supervised framework to learn an NMR chemical shift
 ## Key Questions for Authors
 
 1. Please provide error bars for MAE and RMSE values, and provide the missing values in Table 2.
-2. The term “unsupervised” is used many times in the paper, but the literature data is not unsupervised as there is a label—a set label. As properly named elsewhere, this is a weakly supervised setting. To avoid confusion, change occurrences of “unsupervised” to “weakly supervised” in the text; “semi-supervised” can also be changed to “weakly supervised” (except for the title, which cannot be changed anymore).
+2. In general the term “unsupervised” is used many times in the paper, but actually the literature data is not unsupervised as there is a label, a set label. As properly named other places, this is a weakly supervised setting. To avoid confusion please change the occurences of "unsupervised" to "weakly-supervised" in the text. Also semi-supervised can be changed to weakly-supervised. (Except for the title, that you cannot change anymore.)
 3. It seems the authors ignore multiplicity of \(^1\)H NMR peaks altogether. This is easy to use and valuable information to restrict possible permutations. Did they try using it?
 4. On Figure 3, the model-collapse argument about the red line in the case of \(^1\)H seems fragile given that the \(^{13}\)C line does not show this behaviour. Nothing is mentioned about this in the text. Please elaborate on possible reasons.
 5. How many conformers do you generate and use as input?

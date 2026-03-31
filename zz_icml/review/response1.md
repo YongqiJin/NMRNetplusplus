@@ -5,33 +5,49 @@
 > My main concern is evaluation fairness and interpretation. The paper emphasizes large gains on ShiftDB-Lit, but the baseline is trained only on NMRShiftDB2 while the proposed model leverages ShiftDB-Lit during training, so the comparison is partly OOD-vs-ID rather than purely method-vs-method. The paper does acknowledge this, but the framing should be more careful.
 
 [Reference Response]
-正文已写明：NMRNet baseline 仅在 NMRShiftDB2 上训练，因而在 ShiftDB-Lit 上为 OOD；半监督模型训练时使用了 ShiftDB-Lit，测试为 ID（见 `main_context.tex` 约 205–207 行）。这与「方法本身」和「分布覆盖」混杂有关。与之相对，**NMRShiftDB2 上的对比**（相对先前监督方法，\(^1\)H / \(^{13}\)C MAE 分别约降 13.4% / 19.6%）是在固定 benchmark 划分下的**同设定**改进，更适合作为「方法相对 SOTA」的主结论。我们将在修改稿中把两类结果分开展示（主文/图注措辞），避免把 ShiftDB-Lit 上的大降幅单独说成纯方法收益。
+要点:
+(1) 承认真是一个 OOD vs ID 的问题。paper 承认了 nmrshiftdb2 更适合作为公认的主要的基准，在 Shiftdb-Lit 上的结果主要为了说明，半监督训练在当前的带指认数据有限的情况下，极大的扩充模型的化学空间，反映了落地场景下的应用范围的扩大。我们也会更注意措辞说明这一点，避免将 Shiftdb-Lit 上的结果单独作为方法的贡献。
+(2) 在原文的 Table 5 中，我们做了关于数据集的消融实验, 结果说明在同一个有监督的数据集上，"augmenting supervised training with an additional weakly-supervised loss does not improve performance", 因此半监督训练的贡献在于让无标注的数据也能够得以训练，因此训练方法和数据集的贡献是耦合的。
+(3) Furthermore, 为了attempt to disentangle the two contributions, 我们evaluated the performance on a held-out scaffold split that is OOD for both models, as the third reviewer (wmHV) suggested. 具体结果见 `exp.md` 的 Table 4.
 
-[TODO: response]
+[Response-1]
 
-[TODO: Exp]
-None
-<!-- Scaffold（或结构 held-out）在 ShiftDB-Lit 上重评，使仅 NMRShiftDB2 训练的 baseline 与半监督模型对**同一**测试域可比（与 Review 3 重叠时可合并一次实验）。 -->
+We thank the reviewer for this careful point. We agree that comparing the proposed model with the baseline on the ShiftDB-Lit test set mixes two contributions: (i) gains from the learning objective, and (ii) a train/test distribution shift (roughly OOD vs. ID). Table 5 shows that when both are trained on the same atom-assigned corpus, augmenting supervised training with an additional weakly supervised loss does not improve performance; the benefit therefore comes from training on unassigned data at scale, so these two contributions are coupled. As we already argue in the paper, NMRShiftDB2 is the primary benchmark for fair comparison; ShiftDB-Lit results are intended to show that semi-supervised training substantially widens chemical coverage when high-quality atom assignments are scarce—reflecting broader, deployment-relevant coverage rather than a standalone claim about the method alone. We will make this framing clearer in the revision.
+
+Furthermore, to disentangle these two factors and following Reviewer wmHV’s suggestion, we additionally evaluate both models on a held-out subset that is structurally OOD with respect to the union of the NMRShiftDB2 and ShiftDB-Lit training scaffolds. These results separate “seeing ShiftDB-Lit during training” from the headline random-split comparison and show that semi-supervised training still improves the supervised baseline under this stricter test. Full experimental details and results are given in Table 4 of our response to Reviewer wmHV (Sec. 4 of our experimental appendix).
+
 
 > A second concern is novelty level. The application is valuable, and the sorting reduction is elegant, but the overall method is still a relatively direct semi-supervised extension of an existing backbone rather than a fundamentally new model family. The strongest novelty is really the formulation plus the scale of the data resource.
 
 [Reference Response]
-与稿件表述一致：骨干为既有 NMRNet（SE(3)-等变），贡献侧重在（1）无原子对应文献谱的**置换不变集合监督**与排序损失等价形式；（2）**大规模** ShiftDB-Lit 与溶剂条件；（3）弱监督与标注数据结合的实证与消融（如 Exp.1–5）。修改稿中将在 Introduction/Contributions 中更明确区分「新架构」与「新学习设定 + 数据与资源」，避免过度声称全新模型族。
+要点:
+(1) 文章核心贡献在于：论证以大规模、无原子级指认的文献谱作为训练信号的有效性；在 NMRShiftDB2 基准上的收益高于近年来单靠模型结构改进带来的典型增益，并在化学空间覆盖、溶剂效应、多核种拓展等方面体现优势，从而凸显传统纯监督设定下的数据瓶颈。
+(2) 本文的主要创新不在新模型结构上，而是希望将讨论重心从 Model-centric AI 转向 Data-centric AI：为 AI for science 提供一个切入点，指向未来科学数据基础设施的建设，以及面向弱标注科学数据的训练范式研究。
 
-[TODO: response]
+[Response-2]
 
-[TODO: Exp]
-None.
+We agree that our strongest novelty lies in the learning formulation and data resource rather than a fundamentally new model family. Our central claim is that training with large-scale literature spectra without atom-level correspondence is effective: on the standard NMRShiftDB2 benchmark, the improvement exceeds what is typically achieved by recent architectural changes alone, and we further demonstrate advantages in chemical-space coverage, solvent-aware modeling, and heteronuclear settings—together highlighting bottlenecks of purely supervised pipelines when high-quality annotations are limited.
+
+The main contribution is not a new architecture but a shift of emphasis from model-centric to data-centric AI for scientific prediction. We position this work as a step toward scalable scientific data infrastructure and learning from weakly labeled scientific data at scale, and we will make this framing explicit in the revised introduction and contributions.
+
 
 > A third concern is data quality / noise robustness. The literature-extracted dataset is large, but inevitably noisy. The paper describes filtering procedures, which is good, but the main text does not quantify error rates from extraction, OCSR, parsing, solvent normalization, or duplicate handling. Since the paper’s central claim relies on learning from noisy literature data, this deserves more explicit auditing.
 
 [Reference Response]
-正文已描述**三阶段过滤**（分子有效性、NMR 有效性、一致性检查）及附录 `Appendix~\ref{app:data}` 指向（见 `main_context.tex` 约 73–77、82 行）。审稿人指出的**各环节错误率/去重比例等定量审计**目前主文未系统给出——我们承认这是加强点，将在修改稿中补充摘要性数字或附录表（来源：人工抽检子集、规则统计或与原始 NMRexp 条目对照等，以实际可复现为准）。
+要点: 
+(1) 如 reviewer 所指，literature-extracted dataset is inevitably noisy，这就是为什么我们加了严格的多步筛选来保证数据的质量。To evaluate the quality of the extracted data, we randomly sampled 300 entries from the dataset and manually cross-checked each against 真实的化学位移数据。根据我们的人工校验结果，H谱化学位移的误差1H: MAE 0.026，13C: MAE 0.206。consistent with expectations for experimental NMR data [1]，并且These values are substantially lower than those reported for NMRShiftDB (0.09 ppm for 1H shift and 0.51 ppm for 13C shift) [2]. 数据质量是可以保证的。
+[1] Jonas, E. & Kuhn, S. Rapid prediction of NMR spectral properties with quantified uncertainty. J. Cheminform. 11, 50, https://doi. org/10.1186/s13321-019-0374-3 (2019).
+[2] Kuhn, S., Kolshorn, H., Steinbeck, C. & Schlörer, N. Twenty years of nmrshiftdb2: A case study of an open database for analytical chemistry. Magn. Reson. Chem. 62, 74–83, https://doi.org/10.1002/mrc.5418 (2024).
+(2) 文章中提到的 "noisy", 出现在关于权重 $\lambda$ 的消融实验 (Line 373) 中. 这里指的是弱监督loss使用的是"伪标签"，这会带来"noise", 因此需要调整权重 $\lambda$ 来平衡方差. 这一点是我们表述的不够清楚，我们会在修改稿中指明这一点.
 
-[TODO: response]
+[Response-3]
 
-[TODO: Exp]
-随机子集人工审计 + 各环节可量化指标（与 Review 1 Key Q1 及 Limitations 一并规划）。
+We thank the reviewer for this important point. The literature-extracted dataset is inevitably noisy. Our multi-step filtering process (Section 3.1) is designed to mitigate this; we manually audited 300 random samples and found H-NMR MAE 0.026 ppm and C-NMR MAE 0.206 ppm, consistent with experimental NMR noise expectations [1] and lower than reported values for NMRShiftDB [2]. Data quality is ensured.
+[1] Jonas, E. & Kuhn, S. Rapid prediction of NMR spectral properties with quantified uncertainty. J. Cheminform. 11, 50, https://doi. org/10.1186/s13321-019-0374-3 (2019).
+[2] Kuhn, S., Kolshorn, H., Steinbeck, C. & Schlörer, N. Twenty years of nmrshiftdb2: A case study of an open database for analytical chemistry. Magn. Reson. Chem. 62, 74–83, https://doi.org/10.1002/mrc.5418 (2024).
+
+The “noisy” reference in the ablation section (Line 373) refers to the use of “pseudo-labels” for weak supervision, which introduces uncertainty. The hyperparameter \(\lambda\) balances this by adjusting the relative importance of atom-level versus molecular-level objectives; in the revision, we will clarify this in the text.
+
 
 > The solvent modeling is promising but still fairly coarse. Solvents are grouped into three categories, with “others” collapsed into one embedding. That is understandable for data imbalance reasons, but it limits chemical interpretability and may hide meaningful solvent-specific behavior.
 
@@ -43,67 +59,58 @@ None.
 [TODO: Exp]
 细粒度溶剂：例如将 “others” 中高频溶剂单独设类或 5–10 类与三桶对比（与 Review 1 Q5 联动）。
 
+
 > Finally, the paper would benefit from stronger baselines in the weak-supervision setting. Most comparisons are against older supervised predictors or the NMRNet baseline. There is less discussion of alternative set-prediction / permutation-invariant training objectives or semi-supervised baselines beyond the chosen formulation.
 
 [Reference Response]
-Table~\ref{tab:methods}（整体对比）已包含 HOSE、GCN、FCG、SGNN、GT-NMR、NMRNet 等**监督**基线；**弱监督设定**下替代目标（如匈牙利真匹配每步、两阶段预训练再微调、masking 自监督等）讨论与实验在篇幅上有限。我们可在修改稿中增加 Related Work/Discussion 中对替代集合目标的引用与讨论；若 rebuttal 允许，补充**小规模**对照实验以增强说服力。
+要点:
+(1) 关于 alternative set-prediction / permutation-invariant objectives：我们采用的 bipartite matching 是AI中常用的，与「每个活性原子对应一个化学位移」的一一对应设定一致，在给定指认的情况下能退化到 Supervised loss；它包含了一些常用的set-prediction loss, 比如 Wasserstein loss (OT)，就是MAE版本的 bipartite matching loss。我们用 MAE、MSE、Huber损失函数做过对比，评测结果接近。
+(2) 关于 semi-supervised baselines：我们补充了预训练 + 微调与联合半监督训练等策略的对比，并报告不同数据组合；具体设置与结果见我们对 Reviewer pNG7（Review 4）的回复。
 
-[TODO: response]
+[Response-5]
 
-[TODO: Exp]
-None
+We thank the reviewer for this suggestion.
+
+(1) On alternative set-prediction / permutation-invariant objectives: we use bipartite matching, which is standard in machine learning and matches the one-to-one pairing of active nuclei with chemical shifts. When peak assignments are fixed, the objective reduces to a supervised per-atom loss. This family includes common set-prediction objectives—for example, Wasserstein-1 distance (OT) is the MAE version of bipartite matching loss under 1D discrete setting. We compared MAE, MSE, and Huber as the pairwise regression term, and observed similar evaluation performance.
+
+(2) On semi-supervised baselines: we compare pretrain–finetune with joint semi-supervised training and report results under several data combinations; protocols and numbers are given in our response to Reviewer pNG7 (Review 4).
+
 
 ## Key Questions for Authors
 
 > Can the authors quantify the noise level of ShiftDB-Lit more directly, for example by manually auditing a random subset of extracted examples?
 
-[Reference Response]
-当前主文未给出人工抽检的定量结论；我们将在修改稿或附录中报告**随机子集**人工核对比例（例如结构解析错误、峰表异常、溶剂标注一致性等），并与自动过滤规则统计一并呈现（具体指标以实际完成为准）。
+[Response-6]
+See Response-3.
 
-[TODO: response]
-
-[TODO: Exp]
-None
 
 > How much of the gain comes from the sorting-based weak loss itself versus simply exposing the model to much broader chemical coverage?
 
-[Reference Response]
-消融表（Table~\ref{tab:ablation-dataset}，约 296–304 行）表明：仅在 NMRShiftDB2 上加 \(L_{\mathrm{mol}}\)（Exp.4）相对纯监督（Exp.1）**不**提升；**NMRShiftDB2 监督 + ShiftDB-Lit 弱监督**（Exp.5）带来提升，说明增益与**文献大规模弱标签数据**强相关，而非同一标注集上“排序损失形式”单独带来的收益。严格分离「仅扩充分子覆盖但不弱监督」需额外对照实验（若审稿人坚持）。
+[Response-7]
+See Response-1.
 
-[TODO: response]
-
-[TODO: Exp]
-Unimol 预训练
 
 > Did the authors deduplicate near-identical molecules or control for overlap between literature-derived molecules and benchmark molecules?
 
-[Reference Response]
-正文对**去重与 train/test 重叠**的定量表述需在修改稿中按实际数据处理管道补全（若当前流水线含基于 SMILES/InChI 或指纹的去重，将明确写出；与 NMRShiftDB2 分子的重叠可报告交集规模或 scaffold 重叠率）。此处以你们代码/日志为准在终稿中写死数字。
+[Response-8]
+We removed identical molecules based on canonical SMILES and did not perform additional deduplication for near-identical molecules with different SMILES.
 
-[TODO: response]
+We verified that there is no overlap between the literature-derived spectra and the benchmark spectra, and no overlap between the training and test sets in ShiftDB-Lit.
 
-[TODO: Exp]
-若主文尚无：统计 ShiftDB-Lit 与 NMRShiftDB2 的分子/骨架重叠比例；文献侧去重规则说明。
 
 > Could the authors compare against a Hungarian-loss implementation directly on a smaller subset to verify that the sorting surrogate is empirically equivalent in practice, not only theoretically?
 
-[Reference Response]
-理论上证实在 MAE/MSE/Huber 等满足 \(l(x,y)=f(|x-y|)\) 且 \(f\) 单调凸时，最优匹配等价于**两侧排序后按序配对**（正文约 120–136 行，附录证明）；匈牙利算法在同一损失下应给出**相同**最优指派。实证上可在小批量或子集上核对 Hungarian 与排序的 \(L_{\mathrm{mol}}\) 是否一致（数值应在浮点误差内）。
+[Response-9]
+We appreciate this suggestion of experimental validation. As a simpler, easy-to-reproduce check, we randomly generated 1,000 set pairs and computed the loss using both a Hungarian implementation and the sorting-based implementation. In every case the two losses matched. Code is given below.
 
-[TODO: response]
+See `zz_icml/review/code.py` (run: `python zz_icml/review/code.py`).
 
-[TODO: Exp]
-子集上 Hungarian vs 排序损失数值一致性验证（或短程训练曲线对比）。
 
 > For solvent modeling, what happens if the most common additional solvents are modeled separately rather than merged into “others”?
 
-[Reference Response]
-当前实现为三桶嵌入以平衡数据量（约 165–166 行）。将 “others” 中高频溶剂单独设 embedding 可能提升该子域表现；需用同一划分做 **ablation** 报告 MAE/RMSE（尤其 “others” 子集）。
+[Response-10]
+See Response-4.
 
-[TODO: response]
-
-[TODO: Exp]
-多类溶剂 embedding 或 5–10 溶剂细分 vs 三桶 baseline。
 
 ## Limitations
 
@@ -115,9 +122,7 @@ Unimol 预训练
 > Right now these are somewhat intertwined. I would also like a clearer comparison to other possible permutation-invariant objectives and perhaps a discussion of when the sorting reduction fails if the loss assumptions are violated.
 
 [Reference Response]
-我们计划在修改稿中：（1）增加**数据审计**相关段落或附录（与噪声/去重/溶剂归一化一致）；（2）用小节或 bullet **拆分三条 claim**，并与 NMRShiftDB2 结果、ShiftDB-Lit 结果、溶剂与 cross-solvent 实验分别对应；（3）在 Discussion 中补充：当损失**不**写成 \(f(|x-y|)\) 或 \(f\) 不满足单调凸时，排序不再保证等价于最优匹配，需回退一般指派或匈牙利/网络流等形式。
+
 
 [TODO: response]
 
-[TODO: Exp]
-数据审计与 claim 拆分以写作与统计为主；若需新实验，与上文「人工子集审计」「溶剂消融」重叠则合并一次完成。

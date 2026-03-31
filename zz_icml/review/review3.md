@@ -74,7 +74,9 @@ Yes.
 
 ## Final Decisions
 
-- **Overall Recommendation:** 5: Accept: Technically solid paper, with high impact on at least one sub-area of AI or moderate-to-high impact on more than one area of AI, with good-to-excellent evaluation, resources, reproducibility, and no unaddressed ethical considerations.
-- **Confidence:** 3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked.
-- **Compliance With LLM Reviewing Policy:** Affirmed
-- **Code Of Conduct Acknowledgement:** Affirmed
+| Item | Value |
+|------|--------|
+| **Overall Recommendation** | **5: Accept** — Technically solid paper, with high impact on at least one sub-area of AI or moderate-to-high impact on more than one area of AI, with good-to-excellent evaluation, resources, reproducibility, and no unaddressed ethical considerations. |
+| **Confidence** | **3** — You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked. |
+| **Compliance with LLM Reviewing Policy** | Affirmed |
+| **Code of Conduct Acknowledgement** | Affirmed |
