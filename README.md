@@ -1,4 +1,4 @@
-From Human Labels to Literature: Semi-Supervised Learning of NMR Chemical Shifts at Scale
+【ICML 2026】From Human Labels to Literature: Semi-Supervised Learning of NMR Chemical Shifts at Scale
 ==================================================
 
 [![arXiv](https://img.shields.io/badge/arXiv-2601.18524-b31b1b?logo=arxiv)](https://arxiv.org/abs/2601.18524)
